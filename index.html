@@ -434,7 +434,7 @@
 
   <!-- INTRO SEQUENCE -->
   <div id="intro">
-    <video id="intro-video" src="intro.mp4" muted playsinline autoplay></video>
+    <video id="intro-video" src="intro.mp4?v=4" muted playsinline autoplay></video>
     <img id="intro-logo" src="logo.png" alt="Five Design">
     <button id="skip-intro" aria-label="Passer l'intro">Passer l'intro →</button>
   </div>
@@ -574,7 +574,16 @@
   // No immediate reaction to transient errors — a stall or buffering
   // hiccup shouldn't cut the video short. The safety net below still
   // guarantees no one gets stuck on a black screen if playback truly fails.
-  setTimeout(showLogo, 6500);
+  // It's timed from the video's own real duration once known, with a
+  // generous default before that, so it can never fire before playback
+  // would naturally finish.
+  let safetyTimer = setTimeout(showLogo, 8000);
+  introVideo.addEventListener('loadedmetadata', ()=>{
+    if(introVideo.duration && isFinite(introVideo.duration)){
+      clearTimeout(safetyTimer);
+      safetyTimer = setTimeout(showLogo, (introVideo.duration*1000) + 2500);
+    }
+  });
 
   skipBtn.addEventListener('click', endIntro);
 
