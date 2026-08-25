@@ -71,8 +71,13 @@
     width:100%;
     height:100%;
     object-fit:cover;
-    opacity:0.9;
+    object-position:center center;
+    transform:scale(1.25);
+    transform-origin:center center;
+    opacity:0.95;
+    transition:opacity 1.2s ease, transform 6s ease-out;
   }
+  #intro.show-logo video{ transform:scale(1.4); }
   #intro-logo{
     position:relative;
     z-index:2;
@@ -81,7 +86,7 @@
     transform:scale(0.85);
     transition:opacity 1.1s ease, transform 1.1s cubic-bezier(.2,.8,.2,1);
   }
-  #intro.show-logo video{ opacity:0.18; transition:opacity 0.9s ease; }
+  #intro.show-logo video{ opacity:0.16; transition:opacity 1.1s ease, transform 6s ease-out; }
   #intro.show-logo #intro-logo{ opacity:1; transform:scale(1); }
   #intro.hide{ opacity:0; pointer-events:none; }
 
@@ -542,18 +547,34 @@
     introEnded = true;
     intro.classList.add('hide');
     body.classList.remove('intro-active');
-    setTimeout(()=> intro.remove(), 1100);
+    setTimeout(()=> intro.remove(), 1200);
   }
 
+  let logoShown = false;
   function showLogo(){
+    if(logoShown) return;
+    logoShown = true;
     intro.classList.add('show-logo');
-    setTimeout(endIntro, 1500);
+    setTimeout(endIntro, 1800);
   }
 
+  // Primary trigger: wait for the video to genuinely finish playing.
   introVideo.addEventListener('ended', showLogo);
-  // safety net in case video metadata fails to load
-  introVideo.addEventListener('error', showLogo);
-  setTimeout(()=>{ if(!intro.classList.contains('show-logo')) showLogo(); }, 8000);
+
+  // Kick off playback explicitly and retry once on user interaction
+  // if the browser silently blocked autoplay (common on mobile).
+  const playPromise = introVideo.play();
+  if(playPromise && playPromise.catch){
+    playPromise.catch(()=>{
+      const retry = ()=>{ introVideo.play().catch(()=>{}); };
+      intro.addEventListener('click', retry, { once:true });
+    });
+  }
+
+  // No immediate reaction to transient errors — a stall or buffering
+  // hiccup shouldn't cut the video short. The safety net below still
+  // guarantees no one gets stuck on a black screen if playback truly fails.
+  setTimeout(showLogo, 6500);
 
   skipBtn.addEventListener('click', endIntro);
 
